@@ -78,14 +78,14 @@ arrivee = pygame.image.load("a.png").convert()
 monstre = pygame.image.load("b.png").convert()
 
 for y,colonne in enumerate(grille):
-    for x,ligne in enumerate(colonne):
-        if ligne == 'd':
+    for x,case in enumerate(colonne):
+        if case == 'd':
             fenetre.blit(depart, (x * TAILLE_TILE, y * TAILLE_TILE))
-        elif ligne == 'a':
+        elif case == 'a':
             fenetre.blit(arrivee, (x * TAILLE_TILE, y * TAILLE_TILE))
-        elif ligne == 's':
+        elif case == 's':
             fenetre.blit(sol, (x * TAILLE_TILE, y * TAILLE_TILE))
-        elif ligne == 'm':
+        elif case == 'm':
             fenetre.blit(mur, (x * TAILLE_TILE, y * TAILLE_TILE))
 
 monstre1 = Monstre(0, 0)
