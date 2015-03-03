@@ -27,7 +27,7 @@ grille = [
 
 #Ce dictionnaire regroupe les attributs variables en fonction des monstres, ie leurs caractéristiques
 dico_monstres = {"Blob" : {"vie" : 1,
-                          "vitesse" : 1, #1 case par seconde
+                          "vitesse" : 2, #1 case par seconde
                           "butin" : 10,
                           "xp" : 15,
                           "force" : 1}} #pts de vie perdus par le joueur si le mob passe l'arrivée
@@ -41,7 +41,7 @@ class Monstre:
         for attribut in dico_monstres[nom].keys():#chargement des attributs
             self.__dict__[attribut] = dico_monstres[nom][attribut]
             
-        self.image = pygame.image.load("FaceBlob1.png").convert()
+        self.image = pygame.image.load("FaceBlob1.png").convert_alpha()
         self.intervalle = 0
         self.timer = time()
         self.direction = "haut"
@@ -56,6 +56,7 @@ class Monstre:
 
         try: #On évite les erreurs dues à des indices trop grands
             if self.intervalle >= 1/self.vitesse:
+                
                 if grille[self.y_case - 1][self.x_case] == 'sol' and self.direction != "haut":# Vérifie en haut
                     self.y_case -= 1
                     self.direction = "bas"
@@ -85,7 +86,6 @@ class Monstre:
         self.x = self.x_case * TAILLE_TILE
         self.y = self.y_case * TAILLE_TILE
         fenetre.blit(self.image, (self.x, self.y))
-        pygame.display.flip()
 
 
 fenetre = pygame.display.set_mode((TILES_HORIZONTAL * TAILLE_TILE + LARGEUR_MENU, TILES_VERTICAL * TAILLE_TILE))
@@ -104,7 +104,6 @@ def afficher_carte(fenetre, grille, dico_textures):
         for x, case in enumerate(colonne):
             texture = dico_textures[case]#on récupère l'image correspondant à la case
             fenetre.blit(texture, (x * TAILLE_TILE, y * TAILLE_TILE))
-            pygame.display.flip()
         
 afficher_carte(fenetre, grille, dico_textures)
 monstre1 = Monstre(0, 0, dico_monstres, "Blob")
@@ -112,7 +111,7 @@ monstre1 = Monstre(0, 0, dico_monstres, "Blob")
 #BOUCLE INFINIE
 continuer = True
 while continuer:
-    pygame.time.Clock().tick(30)
+    #pygame.time.Clock().tick(30)
     for event in pygame.event.get():
         if event.type == QUIT:
             continuer = False
