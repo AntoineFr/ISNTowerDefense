@@ -29,10 +29,19 @@ grille = [
 
 #Ce dictionnaire regroupe les attributs variables en fonction des monstres, ie leurs caractéristiques
 dico_monstres = {"Blob" : {"vie" : 2,
-                          "vitesse" : 3, #2 cases par seconde
-                          "butin" : 10,
-                          "xp" : 15,
-                          "force" : 1} #pts de vie perdus par le joueur si le mob passe l'arrivée
+                           "vitesse" : 2, #4 cases par seconde
+                           "butin" : 10,
+                           "xp" : 15,
+                           "force" : 1,
+                           "image_src" : "sprites_tower_defense/FaceBlob1.png"
+                           },
+                 "Boss" : {"vie" : 4,
+                           "vitesse" : 4, #4 cases par seconde
+                           "butin" : 20,
+                           "xp" : 20,
+                           "force" : 10,
+                           "image_src" : "sprites_tower_defense/Boss.png"
+                           }
                  }
 
 #Ce dictionnaire regroupe les attributs variables en fonction des tours, ie leurs caractéristiques
@@ -43,6 +52,7 @@ dico_tours = {"base" : {"cout" : 20,
                         "image_src" : "sprites_tower_defense/Tour1--0.png"
                         }
               }
+liste_vagues = [{"intervalle" : 1, "monstres" : ["Blob","Blob","Boss"]}]
 
 liste_tours = []
 liste_monstres = []
@@ -58,7 +68,7 @@ class Monstre:
         for attribut in dico_monstres[nom].keys():#chargement des attributs
             self.__dict__[attribut] = dico_monstres[nom][attribut]
             
-        self.image = pygame.image.load("sprites_tower_defense/FaceBlob1.png").convert_alpha()
+        self.image = pygame.image.load(self.image_src).convert_alpha()
         self.intervalle = 0
         self.timer = time()
         self.direction = "haut"
@@ -68,28 +78,30 @@ class Monstre:
         self.y = _y * TAILLE_TILE
         
     def sur_arrivee(self):
-        return False
+            if grille[self.y_case][self.x_case] == 'arrivee':
+                return True
+            return False
         
-    def deplacer(self, grille):
+    def deplacer(self, grille, indice):
         global joueur_vie
+        global liste_monstres
         # Recherche d'un chemin libre
         try: #On évite les erreurs dues à des indices trop grands
             if self.sur_arrivee():
                 joueur_vie -= self.force
-##            if self.x_case - 1 >= 0 and (grille[self.y_case - 1][self.x_case] == 'arrivee' or grille[self.y_case + 1][self.x_case] == 'arrivee' or \
-##               grille[self.y_case][self.x_case - 1] == 'arrivee' or grille[self.y_case][self.x_case + 1] == 'arrivee'):
-##                print("MORT")
+                print("MORT")
+                del liste_monstres[indice]
             if self.intervalle >= 1/self.vitesse:
-                if grille[self.y_case - 1][self.x_case] == 'sol' and self.direction != "haut":# Vérifie en haut
+                if grille[self.y_case - 1][self.x_case] in ("sol", "arrivee", "depart") and self.direction != "haut":# Vérifie en haut
                     self.y_case -= 1
                     self.direction = "bas"
-                elif grille[self.y_case][self.x_case + 1] == 'sol' and self.direction != "droite":# Vérifie à droite
+                elif grille[self.y_case][self.x_case + 1] in ("sol", "arrivee", "depart") and self.direction != "droite":# Vérifie à droite
                     self.x_case += 1
                     self.direction = "gauche"
-                elif grille[self.y_case + 1][self.x_case] == 'sol' and self.direction != "bas":# Vérifie en bas
+                elif grille[self.y_case + 1][self.x_case] in ("sol", "arrivee", "depart") and self.direction != "bas":# Vérifie en bas
                     self.y_case += 1
                     self.direction = "haut"
-                elif grille[self.y_case][self.x_case - 1] == 'sol' and self.direction != "gauche":# Vérifie à gauche
+                elif grille[self.y_case][self.x_case - 1] in ("sol", "arrivee", "depart") and self.direction != "gauche":# Vérifie à gauche
                     self.x_case -= 1
                     self.direction = "droite"
 
@@ -122,7 +134,7 @@ class Tour:
         self.image = pygame.image.load(self.image_src).convert_alpha()
         
     def tire(self, ennemi):
-        global liste_tours
+        global liste_monstres
         """On tire si la distance tourelle/ennemi est inférieure à la portée
            et a une cadence donnée"""
         if (ennemi.x - self.x)**2 + (ennemi.y - self.y)**2 <= self.portee**2 \
@@ -131,24 +143,20 @@ class Tour:
             self.intervalle = 0
             self.timer = time()
             print(ennemi.vie)
-            if ennemi.vie <= 0 and (ennemi in liste_tours):
-                liste_tours.remove(ennemi)
+            if ennemi.vie <= 0 and (ennemi in liste_monstres):
+                liste_monstres.remove(ennemi)
         else:
             self.intervalle = time() - self.timer
 
     def afficher(self, fenetre):
         fenetre.blit(self.image, (self.x, self.y))
 
-#ancien_chemin = os.getcwd()
-#os.chdir(os.getcwd() + "\\sprites_tower_defense")
 dico_textures = {"sol" : pygame.image.load("sprites_tower_defense/sol.png").convert(),
                  "mur" : pygame.image.load("sprites_tower_defense/mur.png").convert(),
                  "depart" : pygame.image.load("sprites_tower_defense/depart.png").convert(),
                  "arrivee" : pygame.image.load("sprites_tower_defense/arrivee.png").convert(),
                  "tour" : pygame.image.load("sprites_tower_defense/transparent.png").convert_alpha()
                  }
-
-
 
 def afficher_carte(fenetre, grille, dico_textures, monstres, tours):
     global monstre1
@@ -157,16 +165,16 @@ def afficher_carte(fenetre, grille, dico_textures, monstres, tours):
             texture = dico_textures[case]#on récupère l'image correspondant à la case
             fenetre.blit(texture, (x * TAILLE_TILE, y * TAILLE_TILE))
             
-    for monstre in monstres:#dessin des monstres
-        monstre.deplacer(grille)
+    for indice, monstre in enumerate(monstres):#dessin des monstres
+        monstre.deplacer(grille, indice)
         monstre.afficher(fenetre)
         
     for tour in tours:#dessin des tours
         tour.tire(monstre1)
         tour.afficher(fenetre)
         
-monstre1 = Monstre(0, 0, dico_monstres, "Blob")
-liste_monstres.append(monstre1)
+#monstre1 = Monstre(0, 0, dico_monstres, "Boss")
+#liste_monstres.append(monstre1)
 
 police = pygame.font.SysFont('Arial', 16)
 MENU_X = TILES_HORIZONTAL * TAILLE_TILE
@@ -177,6 +185,8 @@ image_tour1 = pygame.image.load(dico_tours["base"]["image_src"]).convert_alpha()
 
 popmonstre_intervalle = 0
 popmonstre_timer = time()
+vague_actuelle = 0
+pause = False
 
 #BOUCLE INFINIE
 continuer = True
@@ -204,15 +214,19 @@ while continuer:
                         tour = Tour(tour_actuelle, pos_case_x, pos_case_y)
                         liste_tours.append(tour)
                         grille[pos_case_y][pos_case_x] = "tour"
-
-    ## Arrivée de monstre frais régulièrement
-    if popmonstre_intervalle >= 1/1:
-        popmonstre_intervalle = 0
-        popmonstre_timer = time()
-        monstre = Monstre(0, 0, dico_monstres, "Blob")
-        liste_monstres.append(monstre)
-    else:
-         popmonstre_intervalle = time() - popmonstre_timer
+    if not pause:
+        ## Arrivée de monstre frais régulièrement
+        if popmonstre_intervalle >= liste_vagues[vague_actuelle]["intervalle"]:
+            popmonstre_intervalle = 0
+            popmonstre_timer = time()
+            if len(liste_vagues[vague_actuelle]["monstres"]) == 0:
+                pause = True
+                continue
+            monstre = Monstre(0, 0, dico_monstres, liste_vagues[vague_actuelle]["monstres"][0])
+            liste_monstres.append(monstre)
+            del liste_vagues[vague_actuelle]["monstres"][0]
+        else:
+            popmonstre_intervalle = time() - popmonstre_timer
     
     afficher_carte(fenetre, grille, dico_textures, liste_monstres, liste_tours)
 
