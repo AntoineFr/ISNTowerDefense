@@ -1,8 +1,5 @@
 ##Il faudra créer un groupe des munitions lancées et utiliser groupe.collide
-#avec les monstres 
-## problème avec le "ennemi" pas défini
-
-
+#avec les monstres
 
 
 import pygame
@@ -11,13 +8,13 @@ from time import time
 from collections import OrderedDict
 
 
-        # A mettre dans un fichier constantes.py
+# A mettre dans un fichier constantes.py
 LARGEUR_MENU = 150
 TAILLE_TILE = 32        # les tiles sont des carrés de 32 sur 32
 TILES_HORIZONTAL = 10       # le nombre de tiles horizontaux de la map
 TILES_VERTICAL = 10
 
-        # Les informations sur la personne qui joue
+# Les informations sur la personne qui joue
 joueur_score = 0
 joueur_vie = 42
 joueur_argent = 100
@@ -35,7 +32,7 @@ grille = [
 ['sol','sol','sol','sol','sol','sol','mur','mur','mur','mur']
 ]
 
-        # Ce dictionnaire regroupe les attributs variables en fonction des monstres, ie leurs caractéristiques
+# Ce dictionnaire regroupe les attributs variables en fonction des monstres, ie leurs caractéristiques
 dico_monstres = {"Blob" : {"vie" : 5,
                            "vitesse" : 2,       #2 cases par seconde
                            "butin" : 10,
@@ -58,15 +55,15 @@ dico_monstres = {"Blob" : {"vie" : 5,
                            }
                  }
 
-        # Ce dictionnaire regroupe les attributs variables en fonction des tours, ie leurs caractéristiques
+# Ce dictionnaire regroupe les attributs variables en fonction des tours, ie leurs caractéristiques
 dic_tours = {"base" : {"cout" : 1,
-                        "portee" : 25,
+                        "portee" : 70,
                         "cadence" : 1,
                         "degats" : 1,
                         "image_src" : "sprites_tower_defense/Tour1--0t.png"
                         },
               "feu" : {"cout" : 2,
-                        "portee" : 10,
+                        "portee" : 100,
                         "cadence" : 1,
                         "degats" : 3,
                         "image_src" : "sprites_tower_defense/Tour2--0t.png"
@@ -102,15 +99,9 @@ dico_images = { "tours" : {"base" : "sprites_tower_defense/Tour1--0t.png",
                 "boulets" : {"Boulet1" : "sprites_tower_defense/Boule_tour1",
                              "Boulet2" : "sprites_tower_defense/Boule_tour2"}
                 }
-
-
-
 liste_vagues = [{"intervalle" : 1, "monstres" : ["Blob","Blob","Boss"]}]
 
-liste_tours = []
-liste_monstres = []
 
-#groupe_monstres = pygame.sprite.Group()
 pygame.init()
 fenetre = pygame.display.set_mode((TILES_HORIZONTAL * TAILLE_TILE + LARGEUR_MENU, TILES_VERTICAL * TAILLE_TILE))
 
@@ -136,11 +127,8 @@ class Monstre(pygame.sprite.Sprite):
         self.direction = "bas"
         self.x_case = _x
         self.y_case = _y
-        self.x = _x * TAILLE_TILE
-        self.y = _y * TAILLE_TILE
         self.cases_marchables = ("sol", "arrivee", "depart")
-##        if self.vie == 0 and self in liste_monstres:
-##            liste_monstres.remove(self)        
+       
         
     def sur_arrivee(self):
         return grille[self.y_case][self.x_case] == 'arrivee'                
@@ -149,12 +137,12 @@ class Monstre(pygame.sprite.Sprite):
     def deplacer(self, grille):
         global joueur_vie
         global groupe_monstres
-                # Recherche d'un chemin libre
+        # Recherche d'un chemin libre
         try:        # On évite les erreurs dues à des indices trop grands
             if self.sur_arrivee():
                 joueur_vie -= self.force
                 print("Vous perdez des points de vie !!")
-                groupe_monstres.remove(self)
+                self.kill()
             if self.intervalle >= 1/self.vitesse:
                 if grille[self.y_case - 1][self.x_case] in self.cases_marchables and self.direction != "bas":# Vérifie en haut
                     self.y_case -= 1
@@ -172,19 +160,18 @@ class Monstre(pygame.sprite.Sprite):
                     self.x_case -= 1
                     self.direction = "gauche"
                     self.image = self.image_gauche
-                
+                    
+                self.cases_marchees += 1
                 self.intervalle = 0
                 self.timer = time()
             else:
                 self.intervalle = time() - self.timer
-
         except IndexError:
             pass        
         
     def draw(self, fenetre):
         self.rect.x = self.x_case * TAILLE_TILE
         self.rect.y = self.y_case * TAILLE_TILE
-        fenetre.blit(self.image, (self.x, self.y))
 
     def update(self, grille, fenetre):
         self.deplacer(grille)
@@ -208,27 +195,27 @@ class Tour(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.x, self.y, 30, 30)
         self.image = pygame.image.load(self.image_src).convert_alpha()
             
-    def tire(self, ennemi):
-        #global liste_monstres
-##        """On tire si la distance tourelle/ennemi est inférieure à la portée
-##           à une cadence donnée"""
-        if (ennemi.x - self.x)**2 + (ennemi.y - self.y)**2 <= self.portee**2 \
-           and self.intervalle >= 1/self.cadence and ennemi.vie - self.degats >= 0:
-            ennemi.vie -= self.degats
-            self.intervalle = 0
-            self.timer = time()
-            print(ennemi.vie)
-            if ennemi.vie == 0 and ennemi in liste_monstres:
-                liste_monstres.remove(ennemi)
-        else:
-            self.intervalle = time() - self.timer
+    def tire(self, groupe_monstres):
+        """On tire si la distance tourelle/ennemi est inférieure à la portée
+           à une cadence donnée"""
+        #On choisit de tirer sur l'ennemi le plus proche de l'arrivée
+        liste_ennemis = groupe_monstres.sprites()
 
-    def draw(self, fenetre):
-        fenetre.blit(self.image, (self.x, self.y))
+        if len(liste_ennemis) != 0:
+            ennemi = max(liste_ennemis, key=lambda elt: elt.cases_marchees)
+            if (ennemi.rect.x - self.x)**2 + (ennemi.rect.y - self.y)**2 <= self.portee**2 \
+               and self.intervalle >= 1/self.cadence:
+                ennemi.vie -= self.degats
+                self.intervalle = 0
+                self.timer = time()
+                print(ennemi.vie)
+                if ennemi.vie <= 0:
+                    ennemi.kill()
+            else:
+                self.intervalle = time() - self.timer
 
-    def update(self, fenetre):
-        self.tire(ennemi)
-        self.draw(fenetre)
+    def update(self, groupe_monstres):
+        self.tire(groupe_monstres)
 
 dico_textures = {"sol" : pygame.image.load("sprites_tower_defense/sol.png").convert_alpha(),
                  "mur" : pygame.image.load("sprites_tower_defense/mur.png").convert_alpha(),
@@ -240,15 +227,11 @@ dico_textures = {"sol" : pygame.image.load("sprites_tower_defense/sol.png").conv
 def afficher_carte(fenetre, grille, dico_textures, groupe_tours, groupe_monstres):
     for y, colonne in enumerate(grille):
         for x, case in enumerate(colonne):
-            texture = dico_textures[case]       # on récupère l'image correspondant à la case
+            texture = dico_textures[case]# on récupère l'image correspondant à la case
             fenetre.blit(texture, (x * TAILLE_TILE, y * TAILLE_TILE))
     groupe_tours.draw(fenetre)
     groupe_monstres.draw(fenetre)
 
-
-def clear_callback(fenetre, groupe_monstres):
-    color = dico_textures["sol"]
-    fenetre.fill(color, rect)
 
 #######################################################################################
 
@@ -260,7 +243,7 @@ vague_actuelle = 0
 vague = liste_vagues[vague_actuelle]["monstres"]
 groupe_monstres = pygame.sprite.RenderUpdates()
 groupe_tours = pygame.sprite.RenderUpdates()
-##groupcollide(dico_monstre, dico_images, Boulet1, Monstre, collided = None)           à revoir
+##groupcollide(dico_monstre, dico_images, Boulet1, Monstre, collided = None) à revoir
 
 popmonstre_intervalle = 0
 popmonstre_timer = time()
@@ -274,6 +257,8 @@ while continuer:
             continuer = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:      # clic gauche
             position_souris = pygame.mouse.get_pos()
+
+            #Partie pour choisir une tour dans le menu
             if position_souris[0] > MENU_X and position_souris[1] > 96:         # un clic quelque part sur la liste de tours
                 pos_case_x = int((position_souris[0] - MENU_X) / TAILLE_TILE)
                 pos_case_y = int((position_souris[1] - 96) / TAILLE_TILE)
@@ -288,6 +273,8 @@ while continuer:
                     tour_actuelle = "base"
                 elif pos_case_x == 1 and pos_case_y == 0:
                     tour_actuelle = "feu"
+
+            #Partie pour acheter et placer une tour sur la carte
             elif position_souris[0] < MENU_X: # un clic sur la carte
                 pos_case_x = int(position_souris[0] / TAILLE_TILE)
                 pos_case_y = int(position_souris[1] / TAILLE_TILE)
@@ -298,7 +285,6 @@ while continuer:
                     else:
                         joueur_argent -= cout_tour
                         tour = Tour(tour_actuelle, pos_case_x, pos_case_y)
-                        #liste_tours.append(tour)#inutile à terme
                         groupe_tours.add(tour)
                         grille[pos_case_y][pos_case_x] = "tour"
 
@@ -308,7 +294,8 @@ while continuer:
 ##                    boss_x = event.pos[0]
 ##                    boss_y = event.pos[1]
 
-                        
+    #Si le jeu n'est pas en pause, les monstres arrivent suivant l'ordre défini
+    #dans la vague
     if not pause:
         ## Arrivée de monstre frais régulièrement
         if popmonstre_intervalle >= liste_vagues[vague_actuelle]["intervalle"]:
@@ -324,11 +311,12 @@ while continuer:
         else:
             popmonstre_intervalle = time() - popmonstre_timer
 
+    #Actualisation de la carte
     groupe_monstres.update(grille, fenetre)
-    groupe_tours.update(fenetre)
-
+    groupe_tours.update(groupe_monstres)
     afficher_carte(fenetre, grille, dico_textures, groupe_tours, groupe_monstres)
 
+    #Affichage du texte à l'écran
     rectangle_noir = pygame.Surface((LARGEUR_MENU, 96))
     rectangle_noir.fill((0, 0, 0))
     fenetre.blit(rectangle_noir, (MENU_X, 0))
@@ -341,12 +329,13 @@ while continuer:
     fenetre.blit(texte_vie, (MENU_X + 10, 30))
     fenetre.blit(texte_argent, (MENU_X + 10, 50))
 
+    #Affichage des tours "achetables" dans le menu
     menu_tours_x = menu_tours_y = 0
     for tour in dico_tours:
         image_tour = pygame.image.load(dico_tours[tour]["image_src"]).convert_alpha()
         fenetre.blit(image_tour, (MENU_X + menu_tours_x * TAILLE_TILE, 96 + menu_tours_y * TAILLE_TILE))
         menu_tours_x += 1
-        if menu_tours_x > 3:
+        if menu_tours_x > 3: # si il y a plus de 3 tours, on change de ligne
            menu_tours_x = 0
            menu_tours_y += 1
 
