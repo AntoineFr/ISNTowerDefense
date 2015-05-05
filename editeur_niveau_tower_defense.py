@@ -10,23 +10,20 @@ import pickle
 import pygame
 from pygame.locals import *
 
-taille_sprite = 32
+TAILLE_TILE = 32
 TILES_HORIZONTAL = 10 #le nombre de tiles horizontaux de la map
 TILES_VERTICAL = 10
 
 pygame.init()
 
-fenetre = pygame.display.set_mode((taille_sprite * TILES_HORIZONTAL,
-                                   taille_sprite * TILES_VERTICAL))
+fenetre = pygame.display.set_mode((TAILLE_TILE * TILES_HORIZONTAL,
+                                   TAILLE_TILE * TILES_VERTICAL))
 
 #chargement des images
-ancien_chemin = os.getcwd()
-os.chdir(ancien_chemin + "\\sprites_tower_defense")
-
-dico_textures = {"sol" : pygame.image.load("sol.png").convert(),
-                 "mur" : pygame.image.load("mur.png").convert(),
-                 "depart" : pygame.image.load("depart.png").convert(),
-                 "arrivee" : pygame.image.load("arrivee.png").convert()}
+dico_textures = {"sol" : pygame.image.load("sprites_tower_defense/sol.png").convert(),
+                 "mur" : pygame.image.load("sprites_tower_defense/mur.png").convert(),
+                 "depart" : pygame.image.load("sprites_tower_defense/depart.png").convert(),
+                 "arrivee" : pygame.image.load("sprites_tower_defense/arrivee.png").convert()}
 
 
 
@@ -86,9 +83,8 @@ while continuer:
         if event.type == KEYDOWN:
             if event.key == K_s: #and verifie_niveau(structure_niveau):
                 #on sauvegarde le niveau
-                os.chdir(ancien_chemin + "\\maps_tower_defense")
                 nom_map = input("Sous quel nom voulez-vous enregistrer cette carte? ")
-                with open(nom_map, 'wb') as fichier:
+                with open("maps_tower_defense/" + nom_map, 'wb') as fichier:
                     mon_pickler = pickle.Pickler(fichier)
                     mon_pickler.dump(structure_niveau)
 
@@ -104,22 +100,22 @@ while continuer:
 
         if event.type == MOUSEBUTTONDOWN:
             if event.button == 1: #au clic gauche, on blitte l'image
-                case_x = event.pos[0] // taille_sprite
-                case_y = event.pos[1] // taille_sprite
+                case_x = event.pos[0] // TAILLE_TILE
+                case_y = event.pos[1] // TAILLE_TILE
                 #calcul de la position en pixel où l'objet sera affiché
-                x = case_x * taille_sprite
-                y = case_y * taille_sprite
+                x = case_x * TAILLE_TILE
+                y = case_y * TAILLE_TILE
                 
                 structure_niveau[case_y][case_x] = bloc_selectionne
                 fenetre.blit(bloc_selectionne, (x,y))
         
         
             if event.button == 3:                
-                case_x = event.pos[0] // taille_sprite
-                case_y = event.pos[1] // taille_sprite
+                case_x = event.pos[0] // TAILLE_TILE
+                case_y = event.pos[1] // TAILLE_TILE
                 #calcul de la position en pixel où l'objet sera affiché
-                x = case_x * taille_sprite
-                y = case_y * taille_sprite
+                x = case_x * TAILLE_TILE
+                y = case_y * TAILLE_TILE
                 #on met un mur sur le bloc a effacer, ce qui revient au meme
                 fenetre.blit(dico_textures['mur'], (x,y))
                 pygame.display.flip()
@@ -130,14 +126,3 @@ while continuer:
     pygame.display.flip()                
 
 pygame.quit()
-
-
-os.chdir(ancien_chemin)
-
-
-
-
-
-
-
-
