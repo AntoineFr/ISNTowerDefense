@@ -1,3 +1,10 @@
+#1 pour bloc noir
+#2 pour blanc
+#3 pour depart
+#4 pour arrivée
+#(et les touches au dessus du clavier, pas le pavé numérique)
+
+
 import os
 import pickle
 import pygame
@@ -9,7 +16,8 @@ TILES_VERTICAL = 10
 
 pygame.init()
 
-fenetre = pygame.display.set_mode((taille_sprite * ,408))
+fenetre = pygame.display.set_mode((taille_sprite * TILES_HORIZONTAL,
+                                   taille_sprite * TILES_VERTICAL))
 
 #chargement des images
 ancien_chemin = os.getcwd()
@@ -21,76 +29,90 @@ dico_textures = {"sol" : pygame.image.load("sol.png").convert(),
                  "arrivee" : pygame.image.load("arrivee.png").convert()}
 
 
-L_sprites = [caisse, mur, objectif, sprite_blanc]
 
-
-fond = pygame.Surface((408,408)).convert()
-fond.fill((255, 255, 255))
+fond = pygame.Surface(fenetre.get_size()).convert()
+fond.fill((0, 0, 0))
 
 fenetre.blit(fond, (0,0))
 pygame.display.flip()
 
 #création d'une liste de listes contenant les cases de notre futur niveau
-structure_niveau = []
+structure_niveau = [[dico_textures["sol"] for i in range(TILES_HORIZONTAL)] for j in range(TILES_VERTICAL)]
 
-i = 0
-a = 0
-for i in range(12):
-    ligne_niveau = []
-    for a in range(12):
-        ligne_niveau.append('0')
-    structure_niveau.append(ligne_niveau)
+
+
+def verifie_niveau(grille):
+    "Vérifie que l'on peut aller du départ à l'arrivée en passant par un chemin"""
+    
+    for y1, colonne in enumerate(grille):
+        for x1, case in enumerate(colonne):
+            if case == dico_textures['depart']:
+                x = x1
+                y = y1
+                case_depart = (x, y)#les coordonnéesdu depart
+    cases_adjacentes = [(x, y+1), (x-1, y), (x+1, y), (x, y+1)]
+    try:
+        for x, y in cases_adjacentes:
+            if grille[y][x] == dico_textures['sol']:
+                case_actuelle = (x, y)#le sol à coté du départ, car il n'y en a qu'une
+    except IndexError:
+        pass
+    
+    while case_actuelle != dico_textures["arrivee"]:
+        cases_testees = 0#si 4 cases testées et pas de cases, suivate, c'est un cul de sac
+        for x, y in cases_adjacentes:
+            if grille[y][x] != case_precedente and grille[y][x] == dico_textures['sol']:
+                #case_suivante = case
+                case_precedente = case_actuelle
+                case_actuelle = grille[y][x]
+            else:
+                cases_testées += 1
+                if cases_testees == 4:
+                    return False
+    return True
+        
     
 #_________________________________________________________________
 
-bloc_selectionne = mur
+bloc_selectionne = dico_textures['mur']
 
 continuer = True
 
-while continuer == True:
+while continuer:
     for event in pygame.event.get():
         if event.type == QUIT:
             continuer = False
             
         if event.type == KEYDOWN:
-            if event.key == K_s:
+            if event.key == K_s: #and verifie_niveau(structure_niveau):
                 #on sauvegarde le niveau
-                os.chdir("C:/Python32/Adrien/niveaux_mario_sokoban")
-                with open('n2', 'wb') as fichier:
+                os.chdir(ancien_chemin + "\\maps_tower_defense")
+                nom_map = input("Sous quel nom voulez-vous enregistrer cette carte? ")
+                with open(nom_map, 'wb') as fichier:
                     mon_pickler = pickle.Pickler(fichier)
                     mon_pickler.dump(structure_niveau)
 
-                print(structure_niveau)
                     
-            elif event.key == K_1:
-                bloc_selectionne = mur
+            elif event.key == K_1: #le 1 au dessus du A, pas le pavé numérique
+                bloc_selectionne = dico_textures['mur']
             elif event.key == K_2:
-                bloc_selectionne = caisse
+                bloc_selectionne = dico_textures['sol']
             elif event.key == K_3:
-                bloc_selectionne = objectif
+                bloc_selectionne = dico_textures['depart']
+            elif event.key == K_4:
+                bloc_selectionne = dico_textures['arrivee']
 
         if event.type == MOUSEBUTTONDOWN:
-            if event.button == 1:
+            if event.button == 1: #au clic gauche, on blitte l'image
                 case_x = event.pos[0] // taille_sprite
                 case_y = event.pos[1] // taille_sprite
                 #calcul de la position en pixel où l'objet sera affiché
                 x = case_x * taille_sprite
                 y = case_y * taille_sprite
                 
+                structure_niveau[case_y][case_x] = bloc_selectionne
                 fenetre.blit(bloc_selectionne, (x,y))
-                pygame.display.flip()
-
-                if bloc_selectionne == mur:
-                    del structure_niveau[case_y][case_x]
-                    structure_niveau[case_y].insert(case_x, 'm')
         
-                if bloc_selectionne == caisse:
-                    del structure_niveau[case_y][case_x]
-                    structure_niveau[case_y].insert(case_x, 'c')
-        
-                if bloc_selectionne == objectif:
-                    del structure_niveau[case_y][case_x]
-                    structure_niveau[case_y].insert(case_x, 'o')
         
             if event.button == 3:                
                 case_x = event.pos[0] // taille_sprite
@@ -98,15 +120,15 @@ while continuer == True:
                 #calcul de la position en pixel où l'objet sera affiché
                 x = case_x * taille_sprite
                 y = case_y * taille_sprite
-                #on met un bloc blanc sur le bloc a effacer, ce qui revient au
-                #meme, et ensuite on remplace par un 0 dans structure_niveau
-                fenetre.blit(sprite_blanc, (x,y))
+                #on met un mur sur le bloc a effacer, ce qui revient au meme
+                fenetre.blit(dico_textures['mur'], (x,y))
                 pygame.display.flip()
 
-                del structure_niveau[case_y][case_x]
-                structure_niveau[case_y].insert(case_x, '0')
+                structure_niveau[case_y][case_x] = dico_textures['mur']
+    
 
-                
+    pygame.display.flip()                
+
 pygame.quit()
 
 
